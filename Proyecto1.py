@@ -6,17 +6,18 @@ capaAux=[]
 Xfile = open("X1.txt",'r')
 Yfile = open("Y1.txt",'r')
 arrayY = []
-FunctActflag = "Sigmoidal"
+FunctActflag = "Tanh"
 
-OperadorCruza = "ArithCross"
-NumeroIndividuos = 50
+OperadorCruza = "SBX"
+NumeroIndividuos = 5
 NumEntradas = 0
 Poblacion = []
 NextGen = []
 hijos = []
-OperadorMut = "Bit Flip"
+OperadorMut = "Poly Mutation"
 ProbCruza = 1.0
 ProbMutacion =0.1
+
 
 
 def detEntradas():
@@ -140,6 +141,8 @@ class IndivCapas():
         return  self.PesosBiasSalida
     def setPeBiOcultaCom(self, pebioc):
         self.PesosBiasOculta = pebioc
+    def setPeBiOcultaIndiv(self,NumElemento, numero):
+        self.PesosBiasOculta[NumElemento] = numero
     
     def setPeBiOculta(self, arreglo,NumNodo):
         for x in range(0,3):
@@ -148,6 +151,8 @@ class IndivCapas():
     def setPeBiSalida(self, arreglo):
         for x in range(0,4):
             self.PesosBiasSalida[x] = arreglo[x]
+    def setPeBiSalidaIndiv(self, NumElemento, numero):
+        self.PesosBiasSalida[NumElemento] = numero
     
     def setFitness(self, fit):
         self.fitness = fit
@@ -257,11 +262,12 @@ def Tournament():
 
 def AlgoritmoGenetico():
     alpha = 0.5
-    hijo1 = IndivCapas(Entradas=NumEntradas)
 
     hijo = IndivCapas(Entradas=NumEntradas)
     generaciones = 0 
     padres =[]
+    deltaMax = 10
+    sigma = 2
 
     #xAxis = []
     #yAxis = []
@@ -270,6 +276,7 @@ def AlgoritmoGenetico():
     for x in range(NumeroIndividuos):  #evaluate the fitness of each individual of the first gen
         Poblacion[x].setFitness( RedNeuronal(Poblacion[x]))
 
+    
     #for x in range(NumeroIndividuos):
     #    print(Poblacion[x].getFitness()   )
     
@@ -277,6 +284,7 @@ def AlgoritmoGenetico():
     ErrorMin =  [1000.0,0]
     ErrorAnter = [1000.0,0]
     ContadorRep = 0
+    
     while (StopCriteria) :
         
         for y in range(NumeroIndividuos):
@@ -313,9 +321,9 @@ def AlgoritmoGenetico():
                     for j in range(0,NumEntradas*3+3): 
                         u= np.random.uniform(0,1)
                         if u <= 0.5:
-                            Bi= (2*u)**(1/generaciones+1)
+                            Bi= (2*u)**(1/(generaciones+1))
                         else: 
-                            Bi = (2*(1-u))**(-1/generaciones+1)
+                            Bi = (2*(1-u))**(-1/(generaciones+1))
                         auxlistOculta1[j] = 0.5*(Poblacion[padres[0]].getPeBiOcultaUnoxUno(j)+Poblacion[padres[1]].getPeBiOcultaUnoxUno(j) ) - .5 * Bi *(Poblacion[padres[0]].getPeBiOcultaUnoxUno(j)-Poblacion[padres[1]].getPeBiOcultaUnoxUno(j))
                         auxlistOculta2[j] = 0.5*(Poblacion[padres[0]].getPeBiOcultaUnoxUno(j)+Poblacion[padres[1]].getPeBiOcultaUnoxUno(j) ) - .5 * Bi *(Poblacion[padres[1]].getPeBiOcultaUnoxUno(j)-Poblacion[padres[0]].getPeBiOcultaUnoxUno(j))
 
@@ -327,9 +335,9 @@ def AlgoritmoGenetico():
                     for j in range(4):
                         u= np.random.uniform(0,1)
                         if u <= 0.5:
-                            Bi= (2*u)**(1/generaciones+1)
+                            Bi= (2*u)**(1/(generaciones+1))
                         else: 
-                            Bi = (2*(1-u))**(-1/generaciones+1)
+                            Bi = (2*(1-u))**(-1/(generaciones+1))
 
                         auxlistaSalida1[j] = 0.5*(Poblacion[padres[0]].getPeBiSalidaUnoxUno(j)+Poblacion[padres[1]].getPeBiSalidaUnoxUno(j) ) - .5 * Bi *(Poblacion[padres[0]].getPeBiSalidaUnoxUno(j)-Poblacion[padres[1]].getPeBiSalidaUnoxUno(j))
                         auxlistaSalida1[j] = 0.5*(Poblacion[padres[0]].getPeBiSalidaUnoxUno(j)+Poblacion[padres[1]].getPeBiSalidaUnoxUno(j) ) - .5 * Bi *(Poblacion[padres[1]].getPeBiSalidaUnoxUno(j)-Poblacion[padres[0]].getPeBiSalidaUnoxUno(j))
@@ -338,39 +346,64 @@ def AlgoritmoGenetico():
                     hijos[1].setPeBiSalida(auxlistaSalida2)
 
                     
-            if np.random.uniform(0,1) < ProbMutacion:
-                if OperadorMut == "Bit Flip":
-                    auxlistOculta= np.zeros(NumEntradas*3+3)
-                    Mask=random.randint(-1000,1000 )
-                    for j in range(0,NumEntradas*3+3): 
-                        Mask=random.randint(-1000,1000)
-                        auxlistOculta[j] = int (np.round(NextGen[y].getPeBiOcultaUnoxUno(j) ))  ^ Mask
+            
+            if OperadorMut == "Poly Mutation":
+                for s in range(0,2):
+                    for x in range(0,NumEntradas*3+3):
+                        if np.random.uniform(0,1) < ProbMutacion:
+                            u= np.random.uniform(0,1)
+                            if u <= 0.5:
+                                Bi= (2*u)**(1/(generaciones+1)) -1
+                            else: 
+                                Bi = 1-(2*(1-u))**(-1/(generaciones+1))
+                            hijos[s].setPeBiOcultaIndiv(x,hijos[s].getPeBiOcultaUnoxUno(x)+ deltaMax*Bi )
                 
-                    NextGen[y].setPeBiOcultaCom(auxlistOculta)
-                    Mask=random.randint(-1000,1000 )
-                    auxlistaSalida = np.zeros(4)
-                    for j in range(4):
-                        Mask=random.randint(-1000,1000 )
-                        auxlistaSalida[j] =  int (np.round(NextGen[y].getPeBiSalidaUnoxUno(j) ))  ^ Mask
-                    NextGen[y].setPeBiSalida(auxlistaSalida)
-                elif OperadorMut == "Real Value Encoding":
-                    print("Real Value Encoding")
+                for s in range(0,2):
+                    for x in range(0,4):
+                        if np.random.uniform(0,1) < ProbMutacion:
+                            u= np.random.uniform(0,1)
+                            if u <= 0.5:
+                                Bi= (2*u)**(1/(generaciones+1))-1
+                            else: 
+                                Bi = 1-(2*(1-u))**(-1/(generaciones+1))
+                            hijos[s].setPeBiSalidaIndiv(x,hijos[s].getPeBiSalidaUnoxUno(x)+ deltaMax*Bi )
+
+                
+            elif OperadorMut == "Normal Mutation":
+                for s in range(0,2):
+                    for x in range(0,NumEntradas*3+3):
+                        if np.random.uniform(0,1) < ProbMutacion:    
+                            hijos[s].setPeBiOcultaIndiv(x,hijos[s].getPeBiOcultaUnoxUno(x)+ sigma* np.random.randn() )
+                
+                for s in range(0,2):
+                    for x in range(0,4):
+                        if np.random.uniform(0,1) < ProbMutacion:                            
+                            hijos[s].setPeBiSalidaIndiv(x,hijos[s].getPeBiSalidaUnoxUno(x)+  sigma* np.random.randn())
 
 
             
             hijos[0].setFitness(RedNeuronal(hijos[0]))
             hijos[1].setFitness(RedNeuronal(hijos[1]))
+            #print(hijos[0].getFitness(),"Fitness hijo 1")
+            #print(hijos[1].getFitness(),"Fitness hijo 2")
                 
             if hijos[0].getFitness() < hijos[1].getFitness():
                 hijo = hijos[0]
             else: 
                 hijo = hijos[1]
+            #print(hijo.getFitness(),"Fitness hijo ")
+            
+            #print(Poblacion[padres[0]].getFitness(),"Fitness papa1")
+            #print(Poblacion[padres[1]].getFitness(),"Fitness papa2")
+            #print(hijo.getFitness(),"Fitness hijo")
+
 
             if(Poblacion[padres[0]].getFitness() < Poblacion[padres[1]].getFitness()):
                 if(Poblacion[padres[0]].getFitness()> hijo.getFitness()):
                     NextGen[y].setPeBiOcultaCom(hijo.getPeBiOcultaComp())
                     NextGen[y].setPeBiSalida(hijo.getPeBiSalida()) 
                     NextGen[y].setFitness(hijo.getFitness())
+                    
                 else:
                     NextGen[y].setPeBiOcultaCom(Poblacion[padres[0]].getPeBiOcultaComp())
                     NextGen[y].setPeBiSalida(Poblacion[padres[0]].getPeBiSalida()) 
@@ -385,24 +418,25 @@ def AlgoritmoGenetico():
                     NextGen[y].setPeBiOcultaCom(Poblacion[padres[1]].getPeBiOcultaComp()) 
                     NextGen[y].setPeBiSalida(Poblacion[padres[1]].getPeBiSalida()) 
                     NextGen[y].setFitness(Poblacion[padres[1]].getFitness())
-                    
-                
-                #elif OperadorMut == "PolyMutation":
+
+            #print(NextGen[y].getFitness() ,"fitness y nextgen")
+            
+        print("Generacion ",generaciones) 
+
+        #for x in range(NumeroIndividuos):
+        #    print(NextGen[x].getFitness())
+        
         
         for x in range(NumeroIndividuos):
-            Poblacion[x] = NextGen[x]
+            Poblacion[x].setPeBiOcultaCom( NextGen[x].getPeBiOcultaComp() )
+            Poblacion[x].setPeBiSalida( NextGen[x].getPeBiSalida())
+            Poblacion[x].setFitness( NextGen[x].getFitness() )
 
-                    
-
-
-
-
-
-
-
+            #print(Poblacion[x].getFitness(),)
+        ErrorMin = DetErrorMin()
+        print(ErrorMin[0])
         
         generaciones = generaciones +1
-        ErrorMin = DetErrorMin()
         
         #print(ErrorMin)
         #if (generaciones%10==0 ):
@@ -410,7 +444,7 @@ def AlgoritmoGenetico():
         #        print(Poblacion[x].getFitness()   )
 
 
-        if (generaciones>1000):
+        if (generaciones>100):
             StopCriteria = False
             print(ErrorMin,"Salida por generaciones")
             print(generaciones, " generaciones")
@@ -430,6 +464,10 @@ def AlgoritmoGenetico():
             ContadorRep = 0
 
         ErrorAnter = ErrorMin
+    
+
+
+    print(Poblacion[ErrorMin[1]].getFitness(), "Fitness Final")
         
 # primero debemos cruzar luego mutar y al ultimo vamos a comparar y tomar al peor padre y cambiarlo con el hijo o dejarlo
 
@@ -444,6 +482,17 @@ NumEntradas = detEntradas() # primero se determina cuantas entradas tiene el arc
 InitPoblacion() # segundo se inicializa con la primera generacion
 AlgoritmoGenetico()
 
-#print(int(np.round(4.0))& int(np.round(5.0)))
 
 #print(Poblacion[0].getPeBiOcultaUnoxUno(1))
+
+""" Cosas para pasar al otro archivo:
+    operador de cruza
+    Operador de mutacion
+    Operador Red Neuronal
+    Poblacion
+    Numero de generaciones limite
+    Cual fue el stop criteria
+    Numero de entradas del archivo
+    Probabilidad de Cruza y de Mutacion
+
+    """
